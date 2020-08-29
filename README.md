@@ -1,8 +1,6 @@
 # RotDnn_Match
 
-Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn)
-
-REQPY_Module is a module contains the python functions required to perform spectral matching of 2 horizontal components to a RotDnn target spectrum as described in Montejo (2020). The functions included can also be used to perform single component matching (Montejo and Suarez 2013), perform baseline correction (Suarez and Montejo 2007), and generate single component, rotated and RotDnn spectra.
+A module of python functions to perform spectral matching of 2 horizontal components to a RotDnn target spectrum as described in Montejo (2020). The functions included can also be used to perform single component matching (Montejo and Suarez 2013), perform baseline correction (Suarez and Montejo 2007), and generate single component, rotated and RotDnn spectra.
 
 # References
 Montejo, L. A. (2020). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra.
