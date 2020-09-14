@@ -5,7 +5,7 @@ A module of python functions to perform spectral matching of 2 horizontal compon
 cite the code: [![DOI](https://zenodo.org/badge/287290497.svg)](https://zenodo.org/badge/latestdoi/287290497)
 
 # References
-Montejo, L. A. (2020). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra.
+Montejo, L. A. (2020). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra (accepted for publication)
 
 Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for the generation of spectrum-compatible records. International Journal of Advanced Structural Engineering, 5(1), 26.
 
