@@ -75,7 +75,7 @@ convolution in the frequency domain
 def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
                 baseline=1,plots=1):
     '''   
-    REQPY1   - Response spectral matching of horizontal ground motion 
+    REQPYrotdnn   - Response spectral matching of horizontal ground motion 
     components to an orientation-independent spectrum (RotDnn)
              
     Input:
