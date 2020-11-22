@@ -2,13 +2,11 @@
 
 A module of python functions to perform spectral matching of 2 horizontal components to a RotDnn target spectrum as described in Montejo (2020). The functions included can also be used to perform single component matching (Montejo and Suarez 2013), perform baseline correction (Suarez and Montejo 2007), and generate single component, rotated and RotDnn spectra.
 
-#cite the paper: 
+cite the paper: 
 
 Montejo, L. A. (2020). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra (https://doi.org/10.1177/8755293020970981)
 
-#cite the code:  
-
-[![DOI](https://zenodo.org/badge/287290497.svg)](https://zenodo.org/badge/latestdoi/287290497)
+cite the code:  [![DOI](https://zenodo.org/badge/287290497.svg)](https://zenodo.org/badge/latestdoi/287290497)
 
 # Other references
 
