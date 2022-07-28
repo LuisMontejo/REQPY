@@ -1,6 +1,12 @@
 '''
 REQPY_Module
 
+updates:
+    
+    7/28/2022.The low bound of the frequency range for decomposition (FF1) 
+    is now defined based on the duration of the record to account for low 
+    frequency contents on long duration records.
+    
 ===============================================================================
 
 Luis A. Montejo (luis.montejo@upr.edu)
@@ -117,7 +123,7 @@ def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
     
     dt = 1/fs                       # time step
     t = np.linspace(0,(n-1)*dt,n)   # time vector
-    FF1 = 0.1; FF2 = 1/(2*dt)       # defines frequency range for CWT decomposition
+    FF1 = min(4/(n*dt),0.1); FF2 = 1/(2*dt)       # defines frequency range for CWT decomposition
     
     Tsortindex=np.argsort(To)
     To = To[Tsortindex]
@@ -351,7 +357,7 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
     n = np.size(s)                # number of data points in seed record
     dt = 1/fs                     # time step
     t = np.linspace(0,(n-1)*dt,n) # time vector
-    FF1 = 0.1; FF2 = 1/(2*dt)     # frequency range for CWT decomposition
+    FF1 = min(4/(n*dt),0.1); FF2 = 1/(2*dt)     # frequency range for CWT decomposition
     
     Tsortindex=np.argsort(To)
     To = To[Tsortindex]
