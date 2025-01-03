@@ -1,21 +1,25 @@
 '''
 REQPY_Module
 
-updates:
-    
-    7/28/2022.The low bound of the frequency range for decomposition (FF1) 
-    is now defined based on the duration of the record to account for low 
-    frequency contents on long duration records.
-    
+Jan 2025 Updates:
+-	Fixed minor bugs on the legends of the plots generated
+-	Updated numerical integration routine (previous was deprecated by scipy)
+-	Optimized response spectra generation routine
+-	Automatically saves plots and text files with the generated motions
+-	Added optional detrending to the baseline correction routine
+
 ===============================================================================
 
 Luis A. Montejo (luis.montejo@upr.edu)
 
 References:
     
-    Montejo, L. A. (2020). Response spectral matching of horizontal ground motion 
+    Montejo, L. A. (2021). Response spectral matching of horizontal ground motion 
     components to an orientation-independent spectrum (RotDnn). 
-    Earthquake Spectra.
+    Earthquake Spectra, 37(2), 1127-1144.
+    
+    Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target 
+    RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
     
     Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for 
     the generation of spectrum-compatible records.
@@ -79,7 +83,7 @@ convolution in the frequency domain
 '''
 
 def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
-                baseline=1,plots=1):
+                baseline=1,porder=-1,plots=1,nameOut='ReqPyOut'):
     '''   
     REQPYrotdnn   - Response spectral matching of horizontal ground motion 
     components to an orientation-independent spectrum (RotDnn)
@@ -97,7 +101,10 @@ def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
         nit: number of iterations (default 15)
         NS: number of scale values to perform the CWT (default 100)
         baseline: 1/0 (yes/no, whether baseline correction is performed, default 1)
+        porder: order of the poynomial to perform initial detrending (default -1, no detrend) 
+                used only if baseline=1
         plots: 1/0 (yes/no, whether plots are generated, default 1)
+        nameOut: string used to name the output files
         
         
     Returns:
@@ -208,18 +215,18 @@ def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
     sc2 = ns2[:,brloc]        # compatible record
     
     if baseline:
-        scc1,cvel1,cdisp1 = baselinecorrect(sc1,t)
-        scc2,cvel2,cdisp2 = baselinecorrect(sc2,t)
+        scc1,cvel1,cdisp1 = baselinecorrect(sc1,t,porder=porder)
+        scc2,cvel2,cdisp2 = baselinecorrect(sc2,t,porder=porder)
     else:
         print('='*40)
         print('**baseline correction was not performed**')
         print('='*40)
         scc1 = sc1
         scc2 = sc2
-        cvel1 = integrate.cumtrapz(scc1, t, initial=0)
-        cdisp1 = integrate.cumtrapz(cvel1, t, initial=0)
-        cvel2 = integrate.cumtrapz(scc2, t, initial=0)
-        cdisp2 = integrate.cumtrapz(cvel2, t, initial=0)
+        cvel1 = integrate.cumulative_trapezoid(scc1, x=t, initial=0)
+        cdisp1 = integrate.cumulative_trapezoid(cvel1, x=t, initial=0)
+        cvel2 = integrate.cumulative_trapezoid(scc2, x=t, initial=0)
+        cdisp2 = integrate.cumulative_trapezoid(cvel2, x=t, initial=0)
 
     PSA180,_,_ = ResponseSpectrumTheta(T,scc1,scc2,zi,dt,theta)
     PSArotnn = np.percentile(PSA180,nn,axis=0)
@@ -235,12 +242,15 @@ def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
     
     if plots:
         import matplotlib.pyplot as plt
+        import matplotlib as mpl
+        mpl.rcParams['font.size'] = 9
+        mpl.rcParams['legend.frameon'] = False
         
-        v1 = integrate.cumtrapz(s1, t, initial=0)
-        d1 = integrate.cumtrapz(v1, t, initial=0)
+        v1 = integrate.cumulative_trapezoid(s1, x=t, initial=0)
+        d1 = integrate.cumulative_trapezoid(v1, x=t, initial=0)
     
-        v2 = integrate.cumtrapz(s2, t, initial=0)
-        d2 = integrate.cumtrapz(v2, t, initial=0)
+        v2 = integrate.cumulative_trapezoid(s2, x=t, initial=0)
+        d2 = integrate.cumulative_trapezoid(v2, x=t, initial=0)
         
         sf = np.sum(ds[Tlocs])/np.sum(PSArotnnor[Tlocs])
         sf1 = np.linalg.norm(cvel1)/np.linalg.norm(v1)
@@ -249,69 +259,81 @@ def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
         alim = np.max(np.abs(np.array([sf1*s1,scc1,sf2*s2,scc2])))
         vlim = np.max(np.abs(np.array([sf1*v1,cvel1,sf2*v2,cvel2])))
         dlim = np.max(np.abs(np.array([sf1*d1,cdisp1,sf2*d2,cdisp2])))
+        
         plt.figure(figsize=(6.5,5))
         
         plt.subplot(321)
-        plt.plot(t,sf1*s1,linewidth=1,color='darkgray')
-        plt.plot(t,scc1,linewidth=1,color='navy')
+        plt.plot(t,sf1*s1,lw=1,color='cornflowerblue')
+        plt.plot(t,scc1,lw=1,color='salmon')
         plt.ylim(-alim,alim)
         plt.ylabel('acc. [g]')
-        frame1 = plt.gca();frame1.axes.xaxis.set_ticklabels([])
+        plt.gca().axes.xaxis.set_ticklabels([])
         
         plt.subplot(323)
-        plt.plot(t,sf1*v1,linewidth=1,color='darkgray')
-        plt.plot(t,cvel1,linewidth=1,color='navy')
+        plt.plot(t,sf1*v1,lw=1,color='cornflowerblue')
+        plt.plot(t,cvel1,lw=1,color='salmon')
         plt.ylim(-vlim,vlim)
         plt.ylabel('vel./g')
-        frame1 = plt.gca();frame1.axes.xaxis.set_ticklabels([])
+        plt.gca().axes.xaxis.set_ticklabels([])
         
         plt.subplot(325)
-        plt.plot(t,sf1*d1,linewidth=1,color='darkgray')
-        plt.plot(t,cdisp1,linewidth=1,color='navy')
+        plt.plot(t,sf1*d1,lw=1,color='cornflowerblue')
+        plt.plot(t,cdisp1,lw=1,color='salmon')
         plt.ylim(-dlim,dlim)
         plt.ylabel('displ./g'); plt.xlabel('t [s]')
         
         plt.subplot(322)
-        plt.plot(t,sf2*s2,linewidth=1,color='darkgray')
-        plt.plot(t,scc2,linewidth=1,color='navy')
+        plt.plot(t,sf2*s2,lw=1,color='cornflowerblue')
+        plt.plot(t,scc2,lw=1,color='salmon')
         plt.ylim(-alim,alim)
-        frame1 = plt.gca();frame1.axes.xaxis.set_ticklabels([]);frame1.axes.yaxis.set_ticklabels([])
+        plt.gca().axes.xaxis.set_ticklabels([]) 
+        plt.gca().axes.yaxis.set_ticklabels([])
         
         plt.subplot(324)
-        plt.plot(t,sf2*v2,linewidth=1,color='darkgray')
-        plt.plot(t,cvel2,linewidth=1,color='navy')
+        plt.plot(t,sf2*v2,lw=1,color='cornflowerblue')
+        plt.plot(t,cvel2,lw=1,color='salmon')
         plt.ylim(-vlim,vlim)
-        frame1 = plt.gca();frame1.axes.xaxis.set_ticklabels([]);frame1.axes.yaxis.set_ticklabels([])
+        plt.gca().axes.xaxis.set_ticklabels([]) 
+        plt.gca().axes.yaxis.set_ticklabels([])
         
         plt.subplot(326)
-        plt.plot(t,sf2*d2,linewidth=1,color='darkgray',label='Scaled')
-        plt.plot(t,cdisp2,linewidth=1,color='navy',label='Matched')
+        plt.plot(t,sf2*d2,lw=1,color='cornflowerblue',label='scaled')
+        plt.plot(t,cdisp2,lw=1,color='salmon',label='matched')
         plt.ylim(-dlim,dlim)
-        frame1 = plt.gca();frame1.axes.yaxis.set_ticklabels([])
+        plt.gca().axes.yaxis.set_ticklabels([])
         plt.xlabel('t [s]')
         plt.figlegend(loc='lower center',ncol=2)
         plt.tight_layout(h_pad=0.3, w_pad=0.3, rect=(0,0.05,1,0.96))
+        
+        plt.savefig(nameOut+'_ReqPyTimeHistories.jpg',dpi=300)
         
         limy = 1.06*np.max([sf*PSArotnnor,PSArotnn])
         auxx = [T1,T1,T2,T2,T1]
         auxy = [0,limy,limy,0,0]
                 
         plt.figure(figsize=(6.5,6.5))
-        plt.fill_between( auxx, auxy, color='skyblue', alpha=0.2)
-        plt.semilogx(T,ds,color='dimgray',linewidth=3)
-        plt.semilogx(T,PSArotnnor,'-k')
-        plt.semilogx(T,sf*PSArotnnor,'-c')
-        plt.semilogx(T,PSArotnn,'-b')
-        plt.plot(auxx, auxy, color='Slateblue', alpha=0.6)
-        plt.legend((': target',': unscaled',': scaled',': matched'),
-                   frameon=False,ncol=4, bbox_to_anchor=(0,1),
-                   loc='lower left')
-        plt.xlabel('T[s]'); plt.ylabel('PSA RotDnn [g]')
-       
+        plt.fill_between( auxx, auxy, color='silver', alpha=0.4,label='match range')
+        plt.semilogx(T,ds,color='darkgray',lw=2,label='target')
+        plt.semilogx(T,PSArotnnor,color='blueviolet',lw=1,label='original')
+        plt.semilogx(T,sf*PSArotnnor,color='cornflowerblue',lw=1,label='scaled')
+        plt.semilogx(T,PSArotnn,color='salmon',lw=1,label='matched')
+        plt.plot(auxx, auxy, color='silver', alpha=1)
+        plt.legend(ncol=5, bbox_to_anchor=(0.5,1.05),loc='center')
+        plt.xlabel('T[s]') 
+        plt.ylabel('PSA RotDnn [g]')
+        
+        plt.savefig(nameOut+'_ReqPySpectra.jpg',dpi=300)
+        
+    
+    headerinfo = 'accelerations in g, dt = ' + str(dt)
+    np.savetxt(nameOut+'comp1ReqPyRotDnnmatched.txt',scc1,header=headerinfo)
+    np.savetxt(nameOut+'comp2ReqPyRotDnnmatched.txt',scc2,header=headerinfo)
+
     return (scc1,scc2,cvel1,cvel2,cdisp1,cdisp2,PSArotnn,PSArotnnor,
             T,meanefin,rmsefin)
     
-def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1):
+def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,
+                 baseline=1,porder=-1,plots=1,nameOut='ReqPyOut'):
     
     '''
     REQPY_single - CWT based modification of a single component from
@@ -334,7 +356,10 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
         nit: max number of iterations (default 30)
         NS: number of scale values to perform the CWT (default 100)
         baseline: 1/0 (yes/no, whether baseline correction is performed, default 1)
+        porder: order of the poynomial to perform initial detrending (default -1, no detrend) 
+                used only if baseline=1
         plots: 1/0 (yes/no, whether plots are generated, default 1)
+        nameOut: string used to name the output files
         
     Returns:
         
@@ -389,8 +414,8 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
     
     # response spectra from the reconstructed and original signal:
        
-    PSAs,_,_,_,_ =  ResponseSpectrum(T,s,zi,dt)
-    PSAsr,_,_,_,_ = ResponseSpectrum(T,sr,zi,dt)
+    PSAs,_,_ =  ResponseSpectrum(T,s,zi,dt)
+    PSAsr,_,_ = ResponseSpectrum(T,sr,zi,dt)
         
     # initial scaling of record:
     
@@ -421,7 +446,7 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
         factor[Tlocs,0] = ds[Tlocs]/hPSAbc[Tlocs,m-1]
         DN = factor*DN
         ns[:,m] = np.trapz(DN.T,scales)
-        hPSAbc[:,m],_,_,_,_ = ResponseSpectrum(T,ns[:,m],zi,dt)
+        hPSAbc[:,m],_,_ = ResponseSpectrum(T,ns[:,m],zi,dt)
         dif = np.abs( hPSAbc[Tlocs,m] - ds[Tlocs] ) / ds[Tlocs]
         meane[m] = np.mean(dif) * 100
         rmse[m]  = np.linalg.norm(dif) / np.sqrt(nTlocs) * 100
@@ -435,26 +460,9 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
         print('**now performing baseline correction**')
         print('='*40)
         
-        CT = np.max(np.array([1,t[-1]/20])) # time to correct
-        vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CT)
-        kka = 1; flbc = True
-        
-        while any(np.isnan(ccs)):
-            kka = kka + 1
-            CTn = kka*CT
-            if CTn >= np.median(t):
-                print('='*40)
-                print('**baseline correction failed**')
-                print('='*40)
-                flbc = False; ccs = sc; cvel=vel; cdespl=despl
-                break
-            vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CTn)
-        if flbc:
-            print('='*40)
-            print('**baseline correction was succesful**')
-            print('='*40)
-        
-        PSAccs,_,_,_,_ = ResponseSpectrum(T,ccs,zi,dt)
+        ccs,cvel,cdespl = baselinecorrect(sc,t,porder=porder)
+                
+        PSAccs,_,_ = ResponseSpectrum(T,ccs,zi,dt)
         
         difin = np.abs( PSAccs[Tlocs] - ds[Tlocs] ) / ds[Tlocs]
         meanefin = np.mean(difin) * 100
@@ -464,8 +472,8 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
         print('**baseline correction was not performed**')
         print('='*40)
         ccs = sc
-        cvel = integrate.cumtrapz(ccs, t, initial=0)
-        cdespl = integrate.cumtrapz(cvel, t, initial=0)
+        cvel = integrate.cumulative_trapezoid(ccs, x=t, initial=0)
+        cdespl = integrate.cumulative_trapezoid(cvel, x=t, initial=0)
         PSAccs = hPSAbc[:,brloc]
         meanefin = meane[brloc]
         rmsefin = rmse [brloc]
@@ -477,16 +485,42 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
     
     if plots:
         import matplotlib.pyplot as plt
+        import matplotlib as mpl
+        mpl.rcParams['font.size'] = 9
+        mpl.rcParams['legend.frameon'] = False
+        
         sosc = sf*s
-        velsc = integrate.cumtrapz(sosc, t, initial=0)
-        desplsc = integrate.cumtrapz(velsc, t, initial=0)
+        velsc = integrate.cumulative_trapezoid(sosc, x=t, initial=0)
+        desplsc = integrate.cumulative_trapezoid(velsc, x=t, initial=0)
+        
+        alim = 1.05*np.max(np.abs(np.array([sosc,ccs])))
+        vlim = 1.05*np.max(np.abs(np.array([velsc,cvel])))
+        dlim = 1.05*np.max(np.abs(np.array([desplsc,cdespl])))
+        
         plt.figure(figsize=(6.5,6.5))
-        plt.subplot(311);plt.plot(t,sosc,'c',t,ccs,'b'); plt.ylabel('acc. [g]')
-        plt.subplot(312);plt.plot(t,velsc,'c',t,cvel,'b'); plt.ylabel('vel./g')
-        plt.subplot(313);plt.plot(t,desplsc,'c',t,cdespl,'b'); plt.ylabel('displ./g')
+        plt.subplot(311) 
+        plt.plot(t,sosc,lw=1,color='cornflowerblue',label='scaled')
+        plt.plot(t,ccs,lw=1,color='salmon',label='matched')
+        plt.ylim(-alim,alim)
+        plt.ylabel('acc. [g]')
+        plt.legend(loc='upper left')
+        plt.gca().axes.xaxis.set_ticklabels([])
+        
+        plt.subplot(312) 
+        plt.plot(t,velsc,lw=1,color='cornflowerblue')
+        plt.plot(t,cvel,lw=1,color='salmon')
+        plt.ylim(-vlim,vlim)
+        plt.ylabel('vel./g')
+        plt.gca().axes.xaxis.set_ticklabels([])
+        
+        plt.subplot(313) 
+        plt.plot(t,desplsc,lw=1,color='cornflowerblue')
+        plt.plot(t,cdespl,lw=1,color='salmon') 
+        plt.ylabel('displ./g')
         plt.xlabel('time [s]')
-        plt.legend((': scaled',': matched'),frameon=False,loc='upper right')
+        plt.ylim(-dlim,dlim)
         plt.tight_layout()
+        plt.savefig(nameOut+'_ReqPyTimeHistories.jpg',dpi=300)
         
         limy = 1.06*np.max([sf*PSAs,PSAccs])
         auxx = [T1,T1,T2,T2,T1]
@@ -494,17 +528,22 @@ def REQPY_single(s,fs,dso,To,T1=0,T2=0,zi=0.05,nit=30,NS=100,baseline=1,plots=1)
         ds = np.interp(T,To,dso,left=np.nan,right=np.nan)
         
         plt.figure(figsize=(6.5,6.5))
-        plt.fill_between( auxx, auxy, color='skyblue', alpha=0.2)
-        plt.semilogx(T,ds,color=[0.5,0.5,0.5],linewidth=3)
-        plt.semilogx(T,PSAs,'-k')
-        plt.semilogx(T,sf*PSAs,'-c')
-        plt.semilogx(T,PSAccs,'-b')
-        plt.plot(auxx, auxy, color='Slateblue', alpha=0.6)
-        plt.legend((': target',': unscaled',': scaled',': matched'),
-                   frameon=False,ncol=4, bbox_to_anchor=(0,1),
-                   loc='lower left')
-        plt.xlabel('T[s]'); plt.ylabel('PSA [g]')
+        plt.fill_between( auxx, auxy, color='silver', alpha=0.4,label='match range')
+        plt.semilogx(T,ds,color='darkgray',lw=2,label='target')
+        plt.semilogx(T,PSAs,color='blueviolet',lw=1,label='original')
+        plt.semilogx(T,sf*PSAs,color='cornflowerblue',lw=1,label='scaled')
+        plt.semilogx(T,PSAccs,color='salmon',lw=1,label='matched')
+        plt.plot(auxx, auxy, color='silver', alpha=1)
+        plt.legend(ncol=5, bbox_to_anchor=(0.5,1.05),loc='center')
+        plt.xlabel('T[s]') 
+        plt.ylabel('PSA [g]')
+        plt.tight_layout()
         
+        plt.savefig(nameOut+'_ReqPySpectra.jpg',dpi=300)
+        
+    headerinfo = 'accelerations in g, dt = ' + str(dt) 
+    outname = nameOut + '_ReqPySpectrallyMatched.txt'
+    np.savetxt(outname,ccs,header=headerinfo)
     
     return ccs,rmsefin,meanefin,cvel,cdespl,PSAccs,PSAs,T,sf
 
@@ -651,13 +690,12 @@ def CheckPeriodRange(T1,T2,To,FF1,FF2):
         FF1 = 1/T2   # redefine FF1 to match the whole spectrum
     
     return T1,T2,FF1
-
-   
+  
 def ResponseSpectrum(T,s,z,dt):
     '''
     ResponseSpectrum - decides what approach to use to estimate the 
     response spectrum based on damping value 
-    (>=4% frequency domain, <4% piecewise)
+    (>=3% frequency domain, <3% piecewise)
     
     Input:
         T: vector with periods (s)
@@ -666,16 +704,16 @@ def ResponseSpectrum(T,s,z,dt):
         dt: time steps for s
     
     Returns:
-        PSA, PSV, SA, SV, SD
+        PSA, PSV, SD
         
     '''
     
-    if z>=0.04:
-        PSA, PSV, SA, SV, SD = RSFD(T,s,z,dt)
+    if z>=0.03:
+        PSA, PSV, SD = RSFD_S(T,s,z,dt)
     else:
-        PSA, PSV, SA, SV, SD = RSPW(T,s,z,dt)
+        PSA, PSV, SD = RSPW(T,s,z,dt)
         
-    return PSA, PSV, SA, SV, SD
+    return PSA, PSV, SD
 
 def RSPW(T,s,zi,dt):
     '''      
@@ -688,7 +726,7 @@ def RSPW(T,s,zi,dt):
         dt: time steps for s
     
     Returns:
-        PSA, PSV, SA, SV, SD
+        PSA, PSV, SD
     
     '''
     import numpy as np
@@ -741,9 +779,7 @@ def RSPW(T,s,zi,dt):
     PSV = (2*pi/T)*SD                    # pseudo-vel. spectrum
     PSA = (2*pi/T)**2 *SD  	             # pseudo-accel. spectrum
     
-    return PSA, PSV, SA, SV, SD
-
-
+    return PSA, PSV, SD
 
 def RSFD(T,s,z,dt):
     '''   
@@ -817,7 +853,63 @@ def RSFD(T,s,z,dt):
     
     return PSA, PSV, SA, SV, SD
 
-def basecorr(t,xg,CT,imax=80,tol=0.01):
+def RSFD_S(T,s,z,dt):
+    '''   
+    luis.montejo@upr.edu 
+    
+    Response spectra (operations in the frequency domain)
+    Faster than RSFD as only computes PSA, PSV, SD
+    Input:
+        T: vector with periods (s)
+        s: acceleration time series
+        z: damping ratio
+        dt: time steps for s
+    
+    Returns:
+        PSA, PSV, SD
+    
+    '''
+    import numpy as np
+    from numpy.fft import fft, ifft
+    
+    pi = np.pi
+
+    npo = np.size(s)
+    nT  = np.size(T)
+    SD  = np.zeros(nT)
+
+    
+    n = int(2**np.ceil(np.log2(npo+10*np.max(T)/dt)))  # add zeros to provide enough quiet time
+    fs=1/dt;
+    s = np.append(s,np.zeros(n-npo))
+    
+    fres  = fs/n                            # frequency resolution
+    nfrs  = int(np.ceil(n/2))               # number of frequencies
+    freqs = fres*np.arange(0,nfrs+1,1)      # vector with frequencies
+    ww    = 2*pi*freqs                      # vector with frequencies [rad/s]
+    ffts = fft(s);         
+    
+    m = 1
+    for kk in range(nT):
+        w = 2*pi/T[kk] ; k=m*w**2; c = 2*z*m*w
+        
+        H1 = 1       / ( -m*ww**2 + k + 1j*c*ww )  # Transfer function (half) - Receptance
+        
+        H1 = np.append(H1,np.conj(H1[n//2-1:0:-1]))
+        H1[n//2] = np.real(H1[n//2])     # Transfer function (complete) - Receptance
+        
+        
+        CoF1 = H1*ffts   # frequency domain convolution
+        d = ifft(CoF1)   # go back to the time domain (displacement)
+        SD[kk] = np.max(np.abs(d))
+            
+    
+    PSV = (2*pi/T)* SD
+    PSA = (2*pi/T)**2 * SD
+    
+    return PSA, PSV, SD
+
+def basecorr(t,xg,CT,porder=-1,imax=80,tol=0.01):
     '''
     performs baseline correction
     
@@ -835,7 +927,8 @@ def basecorr(t,xg,CT,imax=80,tol=0.01):
         t: time vector [s]
         xg: time history of accelerations
         CT: time for correction [s]
-        omax: maximum number of iterations (fefault 80)
+        porder: order of the poynomial to perform initial detrending (default -1, no detrend) 
+        imax: maximum number of iterations (default 80)
         tol: tolerance (percent of the max, default 0.01)
     
     return:
@@ -848,11 +941,15 @@ def basecorr(t,xg,CT,imax=80,tol=0.01):
     import numpy as np
     from scipy import integrate
     
+    if porder>=0:
+        pp = np.polynomial.Polynomial.fit(t, xg, deg=porder)
+        xg = xg-pp(t) # initial detrend
+    
     n = np.size(xg)
     cxg = np.copy(xg)  
     
-    vel = integrate.cumtrapz(xg, t, initial=0)
-    despl = integrate.cumtrapz(vel, t, initial=0)
+    vel = integrate.cumulative_trapezoid(xg, x=t, initial=0)
+    despl = integrate.cumulative_trapezoid(vel, x=t, initial=0)
     dt = t[1]-t[0]
     L  = int(np.ceil(CT/(dt))-1)   
     M  = n-L
@@ -901,9 +998,9 @@ def basecorr(t,xg,CT,imax=80,tol=0.01):
               cxg[i] = (1 + valfap*((i + 1 - M)/(n-M))) * cxg[i]
           else:
               cxg[i] = (1 + valfan*((i + 1 - M)/(n-M))) * cxg[i]
- 
-      cvel = integrate.cumtrapz(cxg, t, initial=0)
-      cdespl = integrate.cumtrapz(cvel, t, initial=0)
+      
+      cvel = integrate.cumulative_trapezoid(cxg, x=t, initial=0)
+      cdespl = integrate.cumulative_trapezoid(cvel, x=t, initial=0)
 
       errv = np.abs(cvel[-1]/np.max(np.abs(cvel)))
       errd = np.abs(cdespl[-1]/np.max(np.abs(cdespl)))
@@ -913,8 +1010,14 @@ def basecorr(t,xg,CT,imax=80,tol=0.01):
       
     return vel,despl,cxg,cvel,cdespl
 
-def baselinecorrect(sc,t):
+def baselinecorrect(sc,t,porder=-1,imax=80,tol=0.01):
     '''
+    t: time vector [s]
+    sc: time history of accelerations
+    porder: order of the poynomial to perform initial detrending (default -1, no detrend) 
+    imax: maximum number of iterations (default 80)
+    tol: tolerance (percent of the max, default 0.01)
+
     baselinecorrect - performs baseline correction iteratively 
     calling basecorr
     
@@ -938,19 +1041,21 @@ def baselinecorrect(sc,t):
     import numpy as np
     
     CT = np.max(np.array([1,t[-1]/20])) # time to correct
-    vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CT)
+    print(f'using first and last {CT:.1f} seconds for baseline correction')
+    vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CT,porder=porder,imax=imax,tol=tol)
     kka = 1; flbc = True
     
     while any(np.isnan(ccs)):
         kka = kka + 1
         CTn = kka*CT
+        print(f'using first and last {CTn:.1f} seconds for baseline correction')
         if CTn >= np.median(t):
             print('='*40)
             print('**baseline correction failed**')
             print('='*40)
             flbc = False; ccs = sc; cvel=vel; cdespl=despl
             break
-        vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CTn)
+        vel,despl,ccs,cvel,cdespl = basecorr(t,sc,CTn,porder=porder,imax=imax,tol=tol)
     if flbc:
         print('='*40)
         print('**baseline correction was succesful**')
@@ -962,7 +1067,7 @@ def ResponseSpectrumTheta(T,s1,s2,z,dt,theta):
     '''
     ResponseSpectrumTheta - decides what approach to use to estimate 
     the response spectrum based on damping value 
-    (>=4% frequency domain, <4% piecewise)
+    (>=4% frequency domain, <3% piecewise)
     
     Input:
         T: vector with periods (s)
@@ -975,13 +1080,12 @@ def ResponseSpectrumTheta(T,s1,s2,z,dt,theta):
         PSA,PSV,SD
     '''
     
-    if z>=0.04:
+    if z>=0.03:
         PSA, PSV, SD = RSFDtheta(T,s1,s2,z,dt,theta)
     else:
         PSA, PSV, SD = RSPWtheta(T,s1,s2,z,dt,theta)
         
     return PSA, PSV, SD
-
 
 def RSFDtheta(T,s1,s2,z,dt,theta):
     '''   

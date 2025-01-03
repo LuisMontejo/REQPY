@@ -12,13 +12,20 @@ Luis A. Montejo (luis.montejo@upr.edu)
 
 References:
     
-    Montejo, L. A. (2020). Response spectral matching of horizontal ground
-    motion components to an orientation-independent spectrum (RotDnn). 
-    Earthquake Spectra
+    Montejo, L. A. (2021). Response spectral matching of horizontal ground motion 
+    components to an orientation-independent spectrum (RotDnn). 
+    Earthquake Spectra, 37(2), 1127-1144.
     
-    Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm
-    for the generation of spectrum-compatible records. International Journal
-    of Advanced Structural Engineering, 5(1), 26.
+    Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target 
+    RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
+    
+    Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for 
+    the generation of spectrum-compatible records.
+    International Journal of Advanced Structural Engineering, 5(1), 26.
+    
+    Suarez, L. E., & Montejo, L. A. (2007). Applications of the wavelet transform
+    in the generation and analysis of spectrum-compatible records. 
+    Structural Engineering and Mechanics, 27(2), 173-197.
     
 '''
 
@@ -30,9 +37,6 @@ import matplotlib.pyplot as plt
 plt.close('all')
 pi = np.pi
 
-
-
-
 seed1     = 'KNG007_NS_X.txt'   # seeed record comp1[g]
 seed2     = 'KNG007_EW_Y.txt'   # seeed record comp2[g]
 dt = 0.02                       # record time step
@@ -41,8 +45,10 @@ fs = 1/dt                       # sampling frequency
 dampratio = 0.05                # damping ratio for spectra
 TL1 = 0; TL2 = 0                # define period range for matching 
                                 # (T1=T2=0 matches the whole spectrum)
-NS = 100                        # number of CWT-scales / periods for response spectrum
-               
+NS = 200                        # number of CWT-scales / periods for response spectrum
+                                # increased from 100 to 200 to improve resolution
+nits = 1                        # just 1 iteration as we are just self-matching    
+ 
 # load both components of the seed record:
 
 gm1 = np.loadtxt(seed1)
@@ -63,14 +69,12 @@ PSArot,_     = rotdnn(s1,s2,dt,dampratio,T,100)
 
 # use the RotD100 response spectrum as target for the match:
 
-TL1, TL2 = 0.2, 4     # period range for matching
-nits = 2              # just 2 iterations as we are just self-matching
-
 (scc1,scc2,cvel1,cvel2,cdisp1,cdisp2,
   PSArotnn,PSArotnnor,T,misfit,rms) = REQPYrotdnn(s1,s2,fs,PSArot,T,100,
                                                   T1=TL1,T2=TL2,zi=dampratio,
-                                                  nit=nits,NS=100,
-                                                  baseline=1,plots=1)
+                                                  nit=nits,NS=NS,
+                                                  baseline=0,porder=-1,
+                                                  plots=1,nameOut='KNG007')
 
 
 
