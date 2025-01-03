@@ -1,3 +1,11 @@
+# Jan 2025 Updates:
+
+-	Fixed minor bugs on the legends of the plots generated
+-	Updated numerical integration routine (previous was deprecated by scipy)
+-	Optimized response spectra generation routine
+-	Automatically saves plots and text files with the generated motions
+-	Added optional detrending to the baseline correction routine
+
 # REQPY
 
 A module of python functions to perform spectral matching of 2 horizontal components to a RotDnn target spectrum as described in Montejo (2021). The functions included can also be used to perform single component matching (Montejo and Suarez 2013), perform baseline correction (Suarez and Montejo 2007), and generate single component, rotated and RotDnn spectra.
@@ -9,6 +17,7 @@ cite the paper: Montejo, L. A. (2021). Response spectral matching of horizontal 
 cite the code:  [![DOI](https://zenodo.org/badge/287290497.svg)](https://zenodo.org/badge/latestdoi/287290497)
 
 # Other references
+Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
 
 Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for the generation of spectrum-compatible records. International Journal of Advanced Structural Engineering, 5(1), 26.
 
