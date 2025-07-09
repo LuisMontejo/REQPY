@@ -80,6 +80,10 @@ convolution in the frequency domain
 
 *load_PEERNGA_record: Load record in .at2 format (PEER NGA Databases)
 
+*write_PEERNGA_record: Write the matched motion to .at2 format (PEER NGA Databases)
+
+*write_tAg_record: Write the matched motion to a time,acceleration pair per row format
+
 '''
 
 def REQPYrotdnn(s1,s2,fs,dso,To,nn,T1=0,T2=0,zi=0.05,nit=15,NS=100,
@@ -1294,4 +1298,63 @@ def load_PEERNGA_record(filepath):
         acc = np.array([p for l in fp for p in l.split()]).astype(float)
     
     return acc,dt,npts,eqname
+
+def write_PEERNGA_record(filepath, acc, dt, npts, eqname):
+    """
+    Write matched record to PEER *.at2 format 
+
+    Input:
+        filepath:   str of file path for writing matched record
+        acc:        numpy.Array of acceleration data
+        dt:         float of time step size [sec] for acceleration record
+        npts:       int of number of points in the record
+        eqname:     str of string from load_PEERNGA_record funtion with seed motion information
+
+    Output:
+        None
+    """
+
+    with open(filepath, 'w') as f:
+        # Write header
+        f.write('PEER NGA STRONG MOTION DATABASE RECORD spectrally matched using https://github.com/LuisMontejo/REQPY\n')
+        f.write(eqname+' (year_name_station_component)\n')
+        f.write('ACCELERATION TIME SERIES IN UNITS OF G\n')
+        f.write('NPTS=%7i, DT=%8.4f SEC\n' % (npts,dt))
+
+        # Write acceleration values
+        ptNum = 0
+        while ptNum < npts:
+            if ptNum+5<=npts:
+                f.write('{:15.6E}{:15.6E}{:15.6E}{:15.6E}{:15.6E}\n'.format(acc[ptNum],acc[ptNum+1],acc[ptNum+2],acc[ptNum+3],acc[ptNum+4]))
+            else:
+                line = ''
+                while ptNum < npts:
+                    line += '{:15.6E}'.format(acc[ptNum])
+                    ptNum += 1
+
+                f.write(line+'\n')
+
+            ptNum += 5
     
+def write_tAg_record(filepath, acc, dt, sep=','):
+    """
+    Write matched record to (ti, Agi) format
+
+    Input:
+        filepath:   str of file path for writing matched record
+        acc:        numpy.Array of acceleration data
+        dt:         float of time step size [sec] for acceleration record
+        sep:        str of separator between time and acceleration values
+
+    Output:
+        None
+    """
+
+    with open(filepath, 'w') as f:
+        # Write header
+        f.write('t [sec]%sAccel [g]\n' % (sep))
+
+        t = 0.0
+        for ag in acc:
+            f.write('{:8.4f}{}{:15.6E}\n'.format(t,sep,ag))
+            t += dt
