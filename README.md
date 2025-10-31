@@ -1,64 +1,118 @@
-# Jan 2025 Updates:
+REQPY: Spectral Matching of Earthquake Records
 
--	Fixed minor bugs on the legends of the plots generated
--	Updated numerical integration routine (previous was deprecated by scipy)
--	Optimized response spectra generation routine
--	Automatically saves plots and text files with the generated motions
--	Added optional detrending to the baseline correction routine
+A Python module for spectral matching of earthquake records using the Continuous Wavelet Transform (CWT) based methodologies described in the referenced papers.
 
-# REQPY
+Its primary capabilities include:
 
-A module of python functions to perform spectral matching of 2 horizontal components to a RotDnn target spectrum as described in Montejo (2021). The functions included can also be used to perform single component matching (Montejo and Suarez 2013), perform baseline correction (Suarez and Montejo 2007), and generate single component, rotated and RotDnn spectra.
+Matching a single ground motion component to a target spectrum.
 
-examples: https://youtu.be/1SFzuP-fjPg
-Jan. 2025 updates: https://youtu.be/_5wFK9hNZH4 
+Matching a pair of horizontal components to an orientation-independent target spectrum RotDnn (e.g., RotD100).
 
-cite the paper: Montejo, L. A. (2021). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra, 37(2), 1127–1144. https://doi.org/10.1177/8755293020970981
+Analysis functions for generating standard and rotated (RotDnn) spectra.
 
-cite the code:  [![DOI](https://zenodo.org/badge/287290497.svg)](https://zenodo.org/badge/latestdoi/287290497)
+Baseline correction routines for processed time histories.
 
-# Other references
-Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
+Installation
 
-Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for the generation of spectrum-compatible records. International Journal of Advanced Structural Engineering, 5(1), 26.
+You can install REQPY using pip:
 
-Suarez, L. E., & Montejo, L. A. (2007). Applications of the wavelet transform in the generation and analysis of spectrum-compatible records. Structural Engineering and Mechanics, 27(2), 173-197.
+pip install reqpy_M
 
-# List of functions included in the module
+Dependencies
 
-*REQPYrotdnn: Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn)
+REQPY requires the following Python packages:
 
-*REQPY_single: CWT based modification of a single component from a historic record to obtain spectrally equivalent acceleration series 
-             
-*ResponseSpectrum: decides what approach to use to estimate the response spectrum based on the specified damping value (>=4% frequency domain, <4% piecewise)
+NumPy
 
-*RSPW: Response spectra using a piecewise algorithm
+SciPy
 
-*RSFD: Response spectra (operations performed in the frequency domain)
+Matplotlib
 
-*ResponseSpectrumTheta: decides what approach to use to estimate the rotated 
-response spectra based on damping value (>=4% frequency domain, <4% piecewise)
+Numba
 
-*RSFDtheta: Rotated response spectra, returns the spectra for each angle 
-accommodated in a matrix (operations performed in the frequency domain)
+Quick Start
 
-*RSPWtheta: Rotated response spectra, returns the spectra for each angle 
-accommodated in a matrix (piecewise approach)
+Example 1: Single Component Matching
 
-*rotdnn: computes rotated and rotdnn spectra
+from reqpy_M import REQPY_single, load_PEERNGA_record, plot_single_results, save_results_as_1col
+import numpy as np
+import matplotlib.pyplot as plt
 
-*basecorr: Performs baseline correction
+# Load seed record and target spectrum
+s_orig, dt, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12140.AT2')
+target_spec = np.loadtxt('ASCE7.txt')
+To, dso = target_spec[:, 0], target_spec[:, 1]
+fs = 1/dt
 
-*baselinecorrect: Performs baseline correction (iteratively calling basecorr)
+# Perform matching
+results = REQPY_single(
+    s=s_orig, fs=fs, dso=dso, To=To,
+    T1=0.05, T2=6.0, zi=0.05, nit=15
+)
 
-*cwtzm: Continuous Wavelet Transform using the Suarez-Montejo wavelet via 
-convolution in the frequency domain
+# Plot results
+fig_hist, fig_spec = plot_single_results(
+    results, s_orig=s_orig, target_spec=(To, dso), T1=0.05, T2=6.0
+)
+# fig_hist.savefig('single_time_history.png')
+# fig_spec.savefig('single_spectrum.png')
+plt.show()
 
-*zumontw: Generates the Suarez-Montejo Wavelet function
+# Save matched record
+save_results_as_1col(results, 'matched_single_1col.txt', comp_key='ccs', header_str=f'Matched accel [g], dt={dt}')
 
-*getdetails: Generates the detail functions from the wavelet coefficients
 
-*CheckPeriodRange: Verifies that the specified matching period range is doable
+Example 2: Two-Component RotDnn Matching (e.g., RotD100)
 
-*load_PEERNGA_record: Load record in .at2 format (PEER NGA Databases)        
+from reqpy_M import REQPYrotdnn, load_PEERNGA_record, plot_rotdnn_results, save_results_as_1col
+import numpy as np
+import matplotlib.pyplot as plt
 
+# Load seed record components
+s1_orig, dt, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12140.AT2')
+s2_orig, _, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12230.AT2')
+fs = 1/dt
+
+# Load target spectrum
+target_spec = np.loadtxt('ASCE7.txt')
+To, dso = target_spec[:, 0], target_spec[:, 1]
+
+# Perform RotD100 matching
+results = REQPYrotdnn(
+    s1=s1_orig, s2=s2_orig, fs=fs, dso=dso, To=To, nn=100,
+    T1=0.05, T2=6.0, zi=0.05, nit=15
+)
+
+# Plot results
+fig_hist, fig_spec = plot_rotdnn_results(
+    results, s1_orig=s1_orig, s2_orig=s2_orig, target_spec=(To, dso), T1=0.05, T2=6.0
+)
+# fig_hist.savefig('rotdnn_time_history.png')
+# fig_spec.savefig('rotdnn_spectrum.png')
+plt.show()
+
+# Save matched records
+header = f'Matched accel [g], dt={dt}'
+save_results_as_1col(results, 'matched_rotdnn_comp1_1col.txt', comp_key='scc1', header_str=header)
+save_results_as_1col(results, 'matched_rotdnn_comp2_1col.txt', comp_key='scc2', header_str=header)
+
+
+References
+
+[1] Montejo, L. A. (2021). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra, 37(2), 1127-1144.
+
+[2] Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
+
+[3] Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for the generation of spectrum-compatible records. International Journal of Advanced Structural Engineering, 5(1), 26.
+
+[4] Suarez, L. E., & Montejo, L. A. (2007). Applications of the wavelet transform in the generation and analysis of spectrum-compatible records. Structural Engineering and Mechanics, 27(2), 173-197.
+
+[5] Suarez, L. E., & Montejo, L. A. (2005). Generation of artificial earthquakes via the wavelet transform. Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
+
+Author
+
+Luis A. Montejo (luis.montejo@upr.edu)
+
+License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
