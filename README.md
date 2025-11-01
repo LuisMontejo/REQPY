@@ -1,39 +1,38 @@
-REQPY: Spectral Matching of Earthquake Records
+# REQPY: Spectral Matching of Earthquake Records
 
 A Python module for spectral matching of earthquake records using the Continuous Wavelet Transform (CWT) based methodologies described in the referenced papers.
 
 Its primary capabilities include:
 
-Matching a single ground motion component to a target spectrum.
+* Matching a single ground motion component to a target spectrum.
+* Matching a pair of horizontal components to an orientation-independent target spectrum RotDnn (e.g., RotD100).
+* Analysis functions for generating standard and rotated (RotDnn) spectra.
+* Baseline correction routines for processed time histories.
 
-Matching a pair of horizontal components to an orientation-independent target spectrum RotDnn (e.g., RotD100).
-
-Analysis functions for generating standard and rotated (RotDnn) spectra.
-
-Baseline correction routines for processed time histories.
-
-Installation
+---
+## Installation
 
 You can install REQPY using pip:
 
+```bash
 pip install reqpy_M
+```
+---
 
-Dependencies
+## Dependencies
 
 REQPY requires the following Python packages:
 
-NumPy
+* NumPy
+* SciPy
+* Matplotlib
+* Numba
 
-SciPy
+## Quick Start
 
-Matplotlib
+### Example 1: Single Component Matching
 
-Numba
-
-Quick Start
-
-Example 1: Single Component Matching
-
+```python
 from reqpy_M import REQPY_single, load_PEERNGA_record, plot_single_results, save_results_as_1col
 import numpy as np
 import matplotlib.pyplot as plt
@@ -61,9 +60,10 @@ plt.show()
 # Save matched record
 save_results_as_1col(results, 'matched_single_1col.txt', comp_key='ccs', header_str=f'Matched accel [g], dt={dt}')
 
+```
+### Example 2: Two-Component RotDnn Matching (e.g., RotD100)
 
-Example 2: Two-Component RotDnn Matching (e.g., RotD100)
-
+```python
 from reqpy_M import REQPYrotdnn, load_PEERNGA_record, plot_rotdnn_results, save_results_as_1col
 import numpy as np
 import matplotlib.pyplot as plt
@@ -96,8 +96,9 @@ header = f'Matched accel [g], dt={dt}'
 save_results_as_1col(results, 'matched_rotdnn_comp1_1col.txt', comp_key='scc1', header_str=header)
 save_results_as_1col(results, 'matched_rotdnn_comp2_1col.txt', comp_key='scc2', header_str=header)
 
-
-References
+```
+---
+## References
 
 [1] Montejo, L. A. (2021). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra, 37(2), 1127-1144.
 
@@ -107,12 +108,14 @@ References
 
 [4] Suarez, L. E., & Montejo, L. A. (2007). Applications of the wavelet transform in the generation and analysis of spectrum-compatible records. Structural Engineering and Mechanics, 27(2), 173-197.
 
-[5] Suarez, L. E., & Montejo, L. A. (2005). Generation of artificial earthquakes via the wavelet transform. Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
+[5] Suarez, L. A., & Montejo, L. A. (2005). Generation of artificial earthquakes via the wavelet transform. Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
 
-Author
+---
+## Author
 
 Luis A. Montejo (luis.montejo@upr.edu)
 
-License
+---
+## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.

@@ -6,17 +6,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reqpy_M"
-version = "0.2.0"  
+version = "0.2.1"  # <-- 1. VERSION UPDATED
 authors = [
     { name = "Luis A. Montejo", email = "luis.montejo@upr.edu" } 
 ]
 description = "A Python module for spectral matching of earthquake records using CWT." 
-readme = "README.md"
-license = { text = "MIT" } 
+readme = { file = "README.md", content-type = "text/markdown" }
+license = "MIT" # 
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    # "License :: OSI Approved :: MIT License", <-- 3. DEPRECATED CLASSIFIER REMOVED
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
