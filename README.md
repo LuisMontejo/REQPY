@@ -1,5 +1,8 @@
 # REQPY: Spectral Matching of Earthquake Records
 
+[![PyPI version](https://badge.fury.io/py/reqpy-M.svg)](https://badge.fury.io/py/reqpy-M)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4007728.svg)](https://doi.org/10.5281/zenodo.4007728)
+
 A Python module for spectral matching of earthquake records using the Continuous Wavelet Transform (CWT) based methodologies described in the referenced papers.
 
 Its primary capabilities include:
