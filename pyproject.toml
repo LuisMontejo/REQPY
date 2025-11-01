@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reqpy_M"
-version = "0.2.1"  # <-- 1. VERSION UPDATED
+version = "0.2.2"  
 authors = [
     { name = "Luis A. Montejo", email = "luis.montejo@upr.edu" } 
 ]
@@ -16,7 +16,6 @@ license = "MIT" #
 requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
-    # "License :: OSI Approved :: MIT License", <-- 3. DEPRECATED CLASSIFIER REMOVED
     "Operating System :: OS Independent",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -31,3 +30,4 @@ dependencies = [
 
 [project.urls]
 "Homepage" = "https://github.com/LuisMontejo/REQPY" 
+"DOI" = "https://doi.org/10.5281/zenodo.4007728"
