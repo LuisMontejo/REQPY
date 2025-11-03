@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 seed_file_1 = 'RSN175_IMPVALL.H_H-E12140.AT2' # Seed record comp1 [g]
 seed_file_2 = 'RSN175_IMPVALL.H_H-E12230.AT2' # Seed record comp2 [g]
 target_file = 'ASCE7.txt'                    # Target spectrum (T, PSA)
-dampratio = 0.0299                             # Damping ratio for spectra
+dampratio = 0.05                             # Damping ratio for spectra
 TL1 = 0.05                                   # Lower period limit for matching (s)
 TL2 = 6.0                                    # Upper period limit for matching (s)
 nit_match = 15
