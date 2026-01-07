@@ -31,6 +31,7 @@ pip install reqpy-M
 ```
 
 Recommended: To enable faster Konno-Ohmachi smoothing (recommended for large datasets), install with the smoothing extra:
+Albert Kottke. (2025). arkottke/pykooh (v0.5.0). Zenodo. https://doi.org/10.5281/zenodo.15499453
 
 ```bash
 pip install "reqpy-M[smoothing]"
@@ -142,4 +143,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 **Author**: Luis A. Montejo (luis.montejo@upr.edu)
 
 **Copyright**: 2021-2026
+
 
