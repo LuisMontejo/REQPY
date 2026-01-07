@@ -1,14 +1,20 @@
 """
-Example 1: Single Component Spectral Matching (Concise)
+Example 1: Single Component Spectral Matching 
 
-Matches a single component to a target spectrum using the refactored module.
-Removes logging and defensive error handling around core functions for brevity.
+Matches a single component to a target spectrum.
+This updated version also computes and plots the FAS and PSD of the
+original, scaled, and matched records for comparison, demonstrating the
+new analysis functions.
+
+The smoothed spectra are downsampled to a log-spaced vector for plotting.
 """
 
-# Import necessary functions f
-
-from reqpy_M import (REQPY_single, load_PEERNGA_record, plot_single_results,
-        save_results_as_at2, save_results_as_2col, save_results_as_1col)
+# Import necessary functions
+from reqpy_M import (
+    REQPY_single, load_PEERNGA_record, plot_single_results,
+    save_results_as_at2, save_results_as_2col, save_results_as_1col,
+    calculate_earthquake_fas, calculate_earthquake_psd, get_log_freqs,
+    plot_fas_psd_comparison)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -29,20 +35,19 @@ baseline_correct = True                       # Perform baseline correction?
 p_order = -1                                  # Detrending order for baseline (-1 = none)
 output_base_name = seed_file[:-4]+'_'+target_file[:-4] # Base name for output files
 
-# --- Load target spectrum and seed record ---
+# --- 1. Load target spectrum and seed record ---
 
 s_orig, dt, npts, eqname = load_PEERNGA_record(seed_file)
 fs = 1 / dt
+nyquist_freq = fs / 2
    
 target_spectrum = np.loadtxt(target_file)
-if target_spectrum.ndim != 2 or target_spectrum.shape[1] != 2:
-    raise ValueError("Target file should have two columns (Period, PSA).")
     
 sort_idx = np.argsort(target_spectrum[:, 0])
 To = target_spectrum[sort_idx, 0]  # Target spectrum periods
 dso = target_spectrum[sort_idx, 1] # Target spectrum PSA
 
-# --- Perform Spectral Matching ---
+# --- 2. Perform Spectral Matching ---
 results = REQPY_single(
     s=s_orig,
     fs=fs,
@@ -59,12 +64,14 @@ print("Spectral matching complete.")
 print(f"Final RMSE (pre-BC): {results['rmsefin']:.2f}%")
 print(f"Final Misfit (pre-BC): {results['meanefin']:.2f}%")
 
-# --- Extract Results ---
+# --- 3. Extract Results & Create Scaled Record ---
 ccs = results['ccs']
 cvel = results['cvel']
 cdespl = results['cdespl']
+sf = results['sf']
+s_scaled = s_orig[:len(ccs)] * sf # Create scaled record for comparison
 
-# --- Plot Results ---
+# --- 4. Plot Original Time History and Response Spectra ---
 
 fig_hist, fig_spec = plot_single_results(
     results=results,
@@ -80,10 +87,69 @@ hist_filename = f"{output_base_name}_TimeHistories.png"
 spec_filename = f"{output_base_name}_Spectra.png"
 fig_hist.savefig(hist_filename, dpi=300)
 fig_spec.savefig(spec_filename, dpi=300)
-
+print(f"Saved plots to {hist_filename} and {spec_filename}")
 plt.show() # Display plots
 
-# --- Save Matched Record ---
+# --- 5. NEW: Calculate FAS and PSD for all records ---
+print("Calculating FAS and PSD for comparison...")
+
+# --- Define a log-spaced frequency vector for smoothed output ---
+output_freq_vector = get_log_freqs(fmin=0.1, fmax=nyquist_freq, pts_per_decade=100)
+
+# Define common analysis parameters
+analysis_params = {
+    'sample_rate': fs,
+    'smoothing_method': 'konno_ohmachi', # 'none', 'konno_ohmachi', 'variable_window'
+    'smoothing_coeff': 20.0,
+    'downsample_freqs': output_freq_vector 
+}
+
+# Calculate FAS (capturing both raw and smooth outputs)
+freqs_fas_raw, fas_orig_raw, _, fas_orig_smooth = calculate_earthquake_fas(s_orig, **analysis_params)
+_, fas_scaled_raw, _, fas_scaled_smooth = calculate_earthquake_fas(s_scaled, **analysis_params)
+_, fas_matched_raw, _, fas_matched_smooth = calculate_earthquake_fas(ccs, **analysis_params)
+
+# Calculate PSD (capturing both raw and smooth outputs)
+freqs_psd_raw, psd_orig_raw, _, _, _, psd_orig_smooth = calculate_earthquake_psd(s_orig, **analysis_params)
+_, psd_scaled_raw, _, _, _, psd_scaled_smooth = calculate_earthquake_psd(s_scaled, **analysis_params)
+_, psd_matched_raw, _, _, _, psd_matched_smooth = calculate_earthquake_psd(ccs, **analysis_params)
+
+# --- 6. NEW: Plot FAS and PSD Comparison ---
+print("Plotting FAS/PSD comparison...")
+
+fig_fas, fig_psd = plot_fas_psd_comparison(
+    # Raw FAS data
+    freqs_fas_raw=freqs_fas_raw,
+    fas_orig_raw=fas_orig_raw,
+    fas_scaled_raw=fas_scaled_raw,
+    fas_matched_raw=fas_matched_raw,
+    # Raw PSD data
+    freqs_psd_raw=freqs_psd_raw,
+    psd_orig_raw=psd_orig_raw,
+    psd_scaled_raw=psd_scaled_raw,
+    psd_matched_raw=psd_matched_raw,
+    # Smoothed data
+    output_freq_vector=output_freq_vector,
+    fas_orig_smooth=fas_orig_smooth,
+    fas_scaled_smooth=fas_scaled_smooth,
+    fas_matched_smooth=fas_matched_smooth,
+    psd_orig_smooth=psd_orig_smooth,
+    psd_scaled_smooth=psd_scaled_smooth,
+    psd_matched_smooth=psd_matched_smooth
+)
+
+# Save the new plots
+fas_filename = f"{output_base_name}_FAS_Comparison.png"
+psd_filename = f"{output_base_name}_PSD_Comparison.png"
+fig_fas.savefig(fas_filename, dpi=300)
+fig_psd.savefig(psd_filename, dpi=300)
+print(f"Saved FAS plot to {fas_filename}")
+print(f"Saved PSD plot to {psd_filename}")
+
+plt.show()
+
+# --- 7. Save Matched Record ---
+print("Saving matched record files...")
 
 # --- Option 1: Save as .AT2 format ---
 at2_filepath = f"{output_base_name}_Matched.AT2"
@@ -111,7 +177,5 @@ header_1col = (f"Matched acceleration (g), dt={results.get('dt', 0.0):.8f}s\n"
                f"Data points follow:")
 save_results_as_1col(results, txt_1col_filepath, comp_key='ccs', header_str=header_1col)
     
-
-
+print(f"Saved {at2_filepath}, {txt_2col_filepath}, {txt_1col_filepath}")
 print("\nScript finished.")
-

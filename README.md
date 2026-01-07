@@ -1,127 +1,145 @@
-# REQPY: Spectral Matching of Earthquake Records
+
+# REQPY: Spectral Matching & Signal Processing Library
+
+**A comprehensive Python module for spectral matching of earthquake records, supporting single-component, RotDnn, and PSD/FAS-compatible generation.**
 
 [![PyPI version](https://badge.fury.io/py/reqpy-M.svg)](https://badge.fury.io/py/reqpy-M)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4007728.svg)](https://doi.org/10.5281/zenodo.4007728)
 
-video: https://youtu.be/3Zcjd_6DhyY?si=KYupBtur4niE8F4u
+## Overview
 
-A Python module for spectral matching of earthquake records using the Continuous Wavelet Transform (CWT) based methodologies described in the referenced papers.
+**REQPY** implements Continuous Wavelet Transform (CWT) based methodologies to modify earthquake acceleration time histories. It allows users to match target response spectra (PSA) while optionally satisfying Fourier Amplitude Spectrum (FAS) and Power Spectral Density (PSD) requirements.
 
-Its primary capabilities include:
+This package consolidates the functionality of the previous `REQPY` and `ReqPyPSD` modules into a single, unified library.
 
-* Matching a single ground motion component to a target spectrum.
-* Matching a pair of horizontal components to an orientation-independent target spectrum RotDnn (e.g., RotD100).
-* Analysis functions for generating standard and rotated (RotDnn) spectra.
-* Baseline correction routines for processed time histories.
+### Key Capabilities
+1.  **Single Component Matching:** Match a seed record to a target response spectrum (PSA).
+2.  **RotDnn Matching:** Match a pair of horizontal components to an orientation-independent target spectrum (e.g., RotD100).
+3.  **Advanced Matching (New in v0.3.0):** Generate records compatible with PSA, minimum PSD, and/or minimum FAS requirements.
+4.  **Signal Analysis (New in v0.3.0):** Compute FAS, PSD, RotDnn spectra, Effective Amplitude Spectra (EAS), and Effective Power Spectra (EPSD) with various smoothing options (including Konno-Ohmachi).
+5.  **Correction Routines:** Baseline correction and localized time-domain PGA correction.
 
 ---
+
 ## Installation
 
-You can install REQPY using pip:
+Install the package via pip:
 
 ```bash
-pip install reqpy_M
+pip install reqpy-M
 ```
+
+Recommended: To enable faster Konno-Ohmachi smoothing (recommended for large datasets), install with the smoothing extra:
+
+```bash
+pip install "reqpy-M[smoothing]"
+```
+
 ---
 
 ## Dependencies
 
 REQPY requires the following Python packages:
 
-* NumPy
-* SciPy
-* Matplotlib
-* Numba
+* **NumPy**
+* **SciPy** (>= 1.6.0)
+* **Matplotlib**
+* **Numba** (Required for optimized performance)
+* **pykooh** (Optional, recommended for faster Konno-Ohmachi smoothing)
 
-## Quick Start
+---
 
-### Example 1: Single Component Matching
+## Provided usage examples (script files):
 
-```python
-from reqpy_M import REQPY_single, load_PEERNGA_record, plot_single_results, save_results_as_1col
-import numpy as np
-import matplotlib.pyplot as plt
+**Example 1 - SingleComponentMatchingExample.py**
+Matches a single component to a target spectrum.
+This updated version also computes and plots the FAS and PSD of the
+original, scaled, and matched records for comparison, demonstrating the
+new analysis functions.
 
-# Load seed record and target spectrum
-s_orig, dt, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12140.AT2')
-target_spec = np.loadtxt('ASCE7.txt')
-To, dso = target_spec[:, 0], target_spec[:, 1]
-fs = 1/dt
+**Example 2 - GeneratingRotatedAndRotDnnSpectraExample.py**
+Separately matches two components to a target spectrum using REQPY_single,
+then calculates the resulting RotD100 spectrum and compares it to the target.
+This demonstrates the error introduced by independent matching.
 
-# Perform matching
-results = REQPY_single(
-    s=s_orig, fs=fs, dso=dso, To=To,
-    T1=0.05, T2=6.0, zi=0.05, nit=15
-)
+**Example 3 - TwoComponentRotDnnMatchingExample.py**
+Modifies two horizontal components from a historic record simultaneously so that
+the resulting RotD100 response spectrum (computed from the pair)
+matches the specified RotD100 design/target spectrum.
+This updated version also computes and plots the RotDnn FAS, RotDnn PSD,
+Effective FAS, and Effective PSD for the original, scaled, and matched pairs
+using the recommended "smooth last" workflow.
 
-# Plot results
-fig_hist, fig_spec = plot_single_results(
-    results, s_orig=s_orig, target_spec=(To, dso), T1=0.05, T2=6.0
-)
-# fig_hist.savefig('single_time_history.png')
-# fig_spec.savefig('single_spectrum.png')
-plt.show()
+**Example 4 - Self matching long duration record verification.py**
+Tests the numerical stability of the CWT algorithm by "self-matching" a
+long-duration record. It calculates the record's own RotD100 spectrum and
+then feeds that spectrum back into REQPYrotdnn for one iteration
+with baseline correction disabled.
+The resulting 'matched' spectrum should be identical to the original.
 
-# Save matched record
-save_results_as_1col(results, 'matched_single_1col.txt', comp_key='ccs', header_str=f'Matched accel [g], dt={dt}')
+**Example 5 - PSA_PSD_Matching.py**
+This script demonstrates the complete workflow:
+1.  Loading a seed record and target spectra (PSA and PSD).
+2.  Generating a compatible record using 'generate_psa_psd_compatible_record'.
+3.  Automatically generating verification plots using 'plot_psa_psd_results'.
 
-```
-### Example 2: Two-Component RotDnn Matching (e.g., RotD100)
+**Example 6 - PSA_FAS_PSD_Matching.py**
+Generating Records Compatible with PSA, Minimum FAS, and Minimum PSD.
+This script demonstrates the new functionality for FAS compliance.
 
-```python
-from reqpy_M import REQPYrotdnn, load_PEERNGA_record, plot_rotdnn_results, save_results_as_1col
-import numpy as np
-import matplotlib.pyplot as plt
 
-# Load seed record components
-s1_orig, dt, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12140.AT2')
-s2_orig, _, _, _ = load_PEERNGA_record('RSN175_IMPVALL.H_H-E12230.AT2')
-fs = 1/dt
-
-# Load target spectrum
-target_spec = np.loadtxt('ASCE7.txt')
-To, dso = target_spec[:, 0], target_spec[:, 1]
-
-# Perform RotD100 matching
-results = REQPYrotdnn(
-    s1=s1_orig, s2=s2_orig, fs=fs, dso=dso, To=To, nn=100,
-    T1=0.05, T2=6.0, zi=0.05, nit=15
-)
-
-# Plot results
-fig_hist, fig_spec = plot_rotdnn_results(
-    results, s1_orig=s1_orig, s2_orig=s2_orig, target_spec=(To, dso), T1=0.05, T2=6.0
-)
-# fig_hist.savefig('rotdnn_time_history.png')
-# fig_spec.savefig('rotdnn_spectrum.png')
-plt.show()
-
-# Save matched records
-header = f'Matched accel [g], dt={dt}'
-save_results_as_1col(results, 'matched_rotdnn_comp1_1col.txt', comp_key='scc1', header_str=header)
-save_results_as_1col(results, 'matched_rotdnn_comp2_1col.txt', comp_key='scc2', header_str=header)
-
-```
 ---
 ## References
 
-[1] Montejo, L. A. (2021). Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn). Earthquake Spectra, 37(2), 1127-1144.
+[1] Suarez, L. A., & Montejo, L. A. (2005). Generation of artificial earthquakes via the wavelet transform. Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
 
-[2] Montejo, L. A. (2023). Spectrally matching pulse‐like records to a target RotD100 spectrum. Earthquake Engineering & Structural Dynamics, 52(9), 2796-2811.
+[2] Montejo, L. A. (2025). "Generation of Response Spectrum Compatible Records Satisfying a Minimum Power Spectral Density Function." Earthquake Engineering and Resilience. DOI: 10.1002/eer2.70008
 
-[3] Montejo, L. A., & Suarez, L. E. (2013). An improved CWT-based algorithm for the generation of spectrum-compatible records. International Journal of Advanced Structural Engineering, 5(1), 26.
+[3]  Montejo, L. A. (2024). "Strong-Motion-Duration-Dependent Power Spectral Density Functions Compatible with Design Response Spectra." Geotechnics 4(4), 1048-1064. DOI: 10.3390/geotechnics4040053
 
-[4] Suarez, L. E., & Montejo, L. A. (2007). Applications of the wavelet transform in the generation and analysis of spectrum-compatible records. Structural Engineering and Mechanics, 27(2), 173-197.
+[4] Montejo, L. A. (2021). "Response spectral matching of horizontal ground motion components to an orientation-independent spectrum (RotDnn)." Earthquake Spectra, 37(2), 1127-1144.
 
-[5] Suarez, L. A., & Montejo, L. A. (2005). Generation of artificial earthquakes via the wavelet transform. Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
+[5] Montejo, L. A., & Suarez, L. E. (2013). "An improved CWT-based algorithm for the generation of spectrum-compatible records." International Journal of Advanced Structural Engineering, 5(1), 26.
 
----
-## Author
+[6] Suarez, L. E., & Montejo, L. A. (2007). "Applications of the wavelet transform in the generation and analysis of spectrum-compatible records." Structural Engineering and Mechanics, 27(2), 173-197.
 
-Luis A. Montejo (luis.montejo@upr.edu)
+[7] Suarez, L. E., & Montejo, L. A. (2005). "Generation of artificial earthquakes via the wavelet transform." Int. Journal of Solids and Structures, 42(21-22), 5905-5919.
+
+
+
+## Changelog
+
+### v0.3.0 (Jan 2026)
+
+**Consolidation**: Merged functionality from ReqPyPSD into REQPY.
+
+**New Features**: Added generate_psa_psd_compatible_record and generate_psa_psd_fas_compatible_record for advanced matching.
+
+**Analysis**: Added comprehensive FAS/PSD calculation functions (calculate_earthquake_psd, calculate_fas_rotDnn, etc.) with Konno-Ohmachi smoothing.
+
+**Utilities**: Added pga_correction for localized time-domain scaling.
+
+**Dependencies**: Added optional support for pykooh for faster smoothing.
+
+### v0.2.0 (Oct 2025)
+
+Refactored core functions to return dictionaries.
+
+Applied NumPy docstring standards and type hinting.
+
+Added public plotting functions.
+
+### v0.1.0 (Jan 2025)
+
+Initial PyPI release.
 
 ---
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+**Author**: Luis A. Montejo (luis.montejo@upr.edu)
+
+**Copyright**: 2021-2026
 
