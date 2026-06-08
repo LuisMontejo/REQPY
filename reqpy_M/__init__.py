@@ -97,7 +97,7 @@ v0.1.0 (Jan 2025):
 __author__ = "Luis A. Montejo"
 __copyright__ = "Copyright 2021-2026, Luis A. Montejo"
 __license__ = "MIT"
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __email__ = "luis.montejo@upr.edu"
 
 # =============================================================================
@@ -4426,8 +4426,6 @@ def plot_rotdnn_results(
         - fig3 (plt.Figure): The polar plots of biaxial response trajectories.
         - fig4 (plt.Figure): The RotD100/RotD50 ratios and the Directionality Spectrum of Acceleration.
     """
-    
-    from reqpy_plus import dfactor 
     
     mpl.rcParams['font.size'] = 9 
     mpl.rcParams['legend.frameon'] = False
