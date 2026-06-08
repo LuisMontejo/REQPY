@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="reqpy-M",
-    version="0.4.0",
+    version="0.4.1",
     author="Luis A. Montejo",
     author_email="luis.montejo@upr.edu",
     description="A Python module for advanced spectral matching of earthquake records (Single, RotDnn, PSD/FAS compliance)",
