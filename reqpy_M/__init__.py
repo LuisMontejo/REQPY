@@ -1643,7 +1643,7 @@ def compute_rotated_spectra_fd(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, ze
     return PSA, PSV, SD
 
 @jit(nopython=True, cache=True)
-def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, zeta: float, dt: float, theta: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, zeta: float, dt: float, theta: np.ndarray, angle_block_size: int = 24) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Calculates rotated response spectra via Piecewise (time-domain).
 
     Internal helper function.
@@ -1662,6 +1662,9 @@ def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, ze
         Time step (s).
     theta : np.ndarray
         Vector of angles (degrees) for rotation.
+    angle_block_size : int, optional
+        Number of angular projections evaluated per temporary NumPy block.
+        Must be at least 1. Default is 24. Silvia Mazzoni, 2026.
 
     Returns
     -------
@@ -1678,6 +1681,8 @@ def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, ze
     n1 = len(s1); n2 = len(s2); n = min(n1, n2)
 
     s1 = s1[:n]; s2 = s2[:n]
+    if angle_block_size < 1:
+        raise ValueError("angle_block_size must be at least 1")
     s_input1 = -s1
     s_input2 = -s2
     
@@ -1747,19 +1752,20 @@ def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, ze
         d1 = u1[0, :]
         d2 = u2[0, :]
 
-        # Rotate using broadcasting and find max
-        cos_th = np.cos(theta_rad).reshape(-1, 1) # Ensure cos_th is (ntheta, 1)
-        sin_th = np.sin(theta_rad).reshape(-1, 1) # Ensure sin_th is (ntheta, 1)
-        drot = d1 * cos_th + d2 * sin_th # Result is (ntheta, n)
-        #SD[:, k] = np.max(np.abs(drot), axis=1)
-        for angle_idx in range(ntheta):
-        # Find the max absolute value in the time history for this angle
-            max_abs_disp_for_angle = 0.0
-            for time_idx in range(n): # n is the number of time points
-                abs_disp = np.abs(drot[angle_idx, time_idx])
-                if abs_disp > max_abs_disp_for_angle:
-                    max_abs_disp_for_angle = abs_disp
-            SD[angle_idx, k] = max_abs_disp_for_angle # Assign to the correct slot
+        # Silvia Mazzoni, 2026: linear-elastic superposition means only
+        # the two orthogonal oscillator histories must be solved. Project them
+        # in bounded angle blocks to limit temporary memory.
+        for block_start in range(0, ntheta, angle_block_size):
+            block_end = min(block_start + angle_block_size, ntheta)
+            cos_block = np.cos(theta_rad[block_start:block_end]).reshape(-1, 1)
+            sin_block = np.sin(theta_rad[block_start:block_end]).reshape(-1, 1)
+            displacement_block = (
+                d1[np.newaxis, :] * cos_block
+                + d2[np.newaxis, :] * sin_block
+            )
+            SD[block_start:block_end, k] = np.max(
+                np.abs(displacement_block), axis=1
+            )
 
     
         # Calculate omega_n, will be inf where T is near zero
@@ -1772,22 +1778,21 @@ def compute_rotated_spectra_pw(T: np.ndarray, s1: np.ndarray, s2: np.ndarray, ze
 
     if np.any(mask_T0):
     
-            # --- Calculate True Rotated PGA ---
-            cos_th = np.cos(theta_rad).reshape(-1, 1) # Shape (ntheta, 1)
-            sin_th = np.sin(theta_rad).reshape(-1, 1) # Shape (ntheta, 1)
-            s_rotated_histories = s1 * cos_th + s2 * sin_th # Shape (ntheta, n)
-    
-            # Find the peak absolute value for each rotated history (each row) using a loop
-            rotated_pga = np.zeros(ntheta) # Initialize array for results
+            # Silvia Mazzoni, 2026: apply the same bounded linear
+            # projection to true rotated PGA at zero period.
+            rotated_pga = np.zeros(ntheta)
+            for block_start in range(0, ntheta, angle_block_size):
+                block_end = min(block_start + angle_block_size, ntheta)
+                cos_block = np.cos(theta_rad[block_start:block_end]).reshape(-1, 1)
+                sin_block = np.sin(theta_rad[block_start:block_end]).reshape(-1, 1)
+                acceleration_block = (
+                    s1[np.newaxis, :] * cos_block
+                    + s2[np.newaxis, :] * sin_block
+                )
+                rotated_pga[block_start:block_end] = np.max(
+                    np.abs(acceleration_block), axis=1
+                )
 
-            for angle_idx in range(ntheta):
-                max_abs_pga_for_angle = 0.0
-                for time_idx in range(n): # n is the number of time points
-                    abs_pga = np.abs(s_rotated_histories[angle_idx, time_idx])
-                    if abs_pga > max_abs_pga_for_angle:
-                        max_abs_pga_for_angle = abs_pga
-                rotated_pga[angle_idx] = max_abs_pga_for_angle
-    
             # Apply corrections using the mask
             PSA[:, mask_T0] = rotated_pga[:, np.newaxis]
             PSV[:, mask_T0] = 0.0
