@@ -7,6 +7,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4007728.svg)](https://doi.org/10.5281/zenodo.4007728)
 
+Montejo Luis A., Generation of Orientation-Independent Response Spectrum-Matched Records Satisfying Minimum Fourier Amplitude and Power Spectral Density 
+Requirements, Earthquake Spectra 2026, 42, e70136. https://doi.org/10.1002/esp4.70136
+
 ## Overview
 
 **REQPY** implements Continuous Wavelet Transform (CWT) based methodologies to modify earthquake acceleration time histories. It allows users to match target 
@@ -105,9 +108,9 @@ while preserving natural directionality.
 ---
 ## References
 
-[1] Montejo, L.A. (2026). "Generation of Orientation-Independent Response Spectrum 
-    Matched Records Satisfying Minimum Fourier Amplitude and Power Spectral Density 
-    Requirements." https://doi.org/10.31223/X5Z49W
+[1] Montejo Luis A., Generation of Orientation-Independent Response Spectrum-Matched Records 
+	Satisfying Minimum Fourier Amplitude and Power Spectral Density Requirements, 
+	Earthquake Spectra 2026, 42, e70136. https://doi.org/10.1002/esp4.70136
     
 [2] Montejo, L. A. (2026). Generation of Fourier Amplitude Spectra and Power Spectral 
     Density Functions Compatible with Orientation-Independent Design Spectra for 
