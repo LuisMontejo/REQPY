@@ -7,8 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4007728.svg)](https://doi.org/10.5281/zenodo.4007728)
 
-Montejo Luis A., Generation of Orientation-Independent Response Spectrum-Matched Records Satisfying Minimum Fourier Amplitude and Power Spectral Density 
-Requirements, Earthquake Spectra 2026, 42, e70136. https://doi.org/10.1002/esp4.70136
+Montejo L.A. (2026). Generation of Orientation-Independent Response Spectrum-Matched Records Satisfying Minimum Fourier Amplitude and Power Spectral Density 
+Requirements, Earthquake Spectra, 42, e70136. https://doi.org/10.1002/esp4.70136
 
 ## Overview
 
@@ -108,7 +108,7 @@ while preserving natural directionality.
 ---
 ## References
 
-[1] Montejo Luis A., Generation of Orientation-Independent Response Spectrum-Matched Records 
+[1] Montejo, L. A. (2026). Generation of Orientation-Independent Response Spectrum-Matched Records 
 	Satisfying Minimum Fourier Amplitude and Power Spectral Density Requirements, 
 	Earthquake Spectra 2026, 42, e70136. https://doi.org/10.1002/esp4.70136
     
